@@ -7,10 +7,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -26,6 +31,7 @@ class MainTest {
         ChromeOptions option = new ChromeOptions();
 //    option.setPageLoadStrategy(PageLoadStrategy.EAGER);
         this.driver = new ChromeDriver(option);
+        driver.manage().window().maximize();
         driver.manage().timeouts().implicitlyWait(Duration.ofMillis(500));
     }
 
@@ -385,6 +391,7 @@ class MainTest {
         assertThat(currentUrl).isEqualTo("https://skillfactory.ru/refund-money");
 
     }
+
     @Test
     public void check_media_link() {
         driver.get("https://skillfactory.ru/");
@@ -404,6 +411,35 @@ class MainTest {
 
         final var currentUrl = driver.getCurrentUrl();
         assertThat(currentUrl).startsWith("https://blog.skillfactory.ru/");
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("generator")
+    void testCalculateMandateI(TestParameterDto value) {
+        driver.get("https://skillfactory.ru/");
+        final var tab = driver.findElement(By.xpath(value.getElementXpath()));
+
+        assertThat(tab.getText()).isEqualTo(value.getExpectedTitle());
+
+        tab.click();
+
+        final var tabs = new ArrayList<>(driver.getWindowHandles());
+        assertThat(tabs).hasSize(2);
+
+        final var openedNewTab = driver.switchTo().window(tabs.get(tabs.size() - 1));
+
+        final var currentUrl = driver.getCurrentUrl();
+        assertThat(currentUrl).startsWith(value.getExpectedUrl());
+
+        System.out.println(value);
+    }
+
+    private static Stream<Arguments> generator() {
+        return Stream.of(
+                Arguments.of(new TestParameterDto("//a[@href='/free-events']", "БЕСПЛАТНО", "https://skillfactory.ru/free-events")),
+                Arguments.of(new TestParameterDto("//a[@href='/career-center']", "ЦЕНТР КАРЬЕРЫ", "https://skillfactory.ru/career-center")),
+                Arguments.of(new TestParameterDto("//a[@href='/contacts']","КОНТАКТЫ","https://skillfactory.ru/contacts")));
     }
 }
 
